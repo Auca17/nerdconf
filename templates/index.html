@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Subasta + Legado: Un agente IA que simula subastas internas entre perfiles, ejecuta tareas y destila skills reusables.">
+  <title>🏛️ Subasta + Legado — Demo</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- ═══ Hero ═══ -->
+    <header class="hero">
+      <div class="hero-icon">🏛️</div>
+      <h1>Subasta + Legado</h1>
+      <p class="hero-subtitle">
+        Un agente que compite, ejecuta, aprende y reutiliza.
+        Hermes Agent Hackathon — NVIDIA × Stripe × Nous Research
+      </p>
+      <div class="hero-flow">
+        <span>competencia</span>
+        <span class="arrow">→</span>
+        <span>ejecución</span>
+        <span class="arrow">→</span>
+        <span>aprendizaje</span>
+        <span class="arrow">→</span>
+        <span>reuso</span>
+      </div>
+    </header>
+
+    <!-- ═══ Status ═══ -->
+    <div class="status-bar" id="status-bar">
+      <div class="status-pill">
+        <span class="dot" id="api-dot"></span>
+        <span id="api-status">Conectando...</span>
+      </div>
+      <div class="status-pill">
+        <span>🤖</span>
+        <span id="model-name">{{ model }}</span>
+      </div>
+      <div class="status-pill">
+        <span>📁</span>
+        <span id="skills-count">0 skills</span>
+      </div>
+    </div>
+
+    <!-- ═══ Task Input ═══ -->
+    <div class="card" id="input-card">
+      <div class="card-header">
+        <span class="icon">📝</span>
+        <h2>Tu Tarea</h2>
+      </div>
+
+      <div class="task-input-wrapper">
+        <textarea
+          id="task-input"
+          class="task-input"
+          placeholder="Describí la tarea que querés resolver..."
+          rows="3"
+        ></textarea>
+      </div>
+
+      <div class="demo-tasks">
+        <span style="font-size: 0.78rem; color: var(--text-muted); margin-right: 0.25rem;">Probar con:</span>
+        <button class="demo-chip" onclick="setDemo(0)">📋 Resumen Nebius</button>
+        <button class="demo-chip" onclick="setDemo(1)">📋 Resumen Stripe</button>
+      </div>
+
+      <!-- Profile Selector -->
+      <div class="card-header" style="margin-top: 1.25rem; margin-bottom: 0.5rem;">
+        <span class="icon">🎯</span>
+        <h2>Perfil del Agente</h2>
+      </div>
+
+      <div class="profile-selector">
+        <div class="profile-option" data-profile="1" onclick="selectProfile('1', this)">
+          <div class="profile-icon">⚡</div>
+          <div class="profile-name">El Rayo</div>
+          <div class="profile-desc">Ultra rápido, conciso</div>
+        </div>
+        <div class="profile-option" data-profile="2" onclick="selectProfile('2', this)">
+          <div class="profile-icon">🎨</div>
+          <div class="profile-name">El Artesano</div>
+          <div class="profile-desc">Metódico, detallista</div>
+        </div>
+        <div class="profile-option selected" data-profile="3" onclick="selectProfile('3', this)">
+          <div class="profile-icon">⚖️</div>
+          <div class="profile-name">El Equilibrado</div>
+          <div class="profile-desc">Balance perfecto</div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" id="run-btn" onclick="runTask()">
+          🚀 Ejecutar
+        </button>
+        <button class="btn btn-secondary" id="clean-btn" onclick="cleanSkills()">
+          🗑️ Limpiar Skills
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ Output ═══ -->
+    <div class="card" id="output-card" style="display: none;">
+      <div class="card-header">
+        <span class="icon">📡</span>
+        <h2>Resultado</h2>
+      </div>
+
+      <div class="timeline" id="timeline"></div>
+
+      <!-- Stats -->
+      <div class="stats-bar" id="stats-bar" style="display: none;">
+        <div class="stat">
+          <div class="stat-value" id="stat-time">—</div>
+          <div class="stat-label">Tiempo</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-phases">—</div>
+          <div class="stat-label">Fases</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-mode">—</div>
+          <div class="stat-label">Modo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Skills Inventory ═══ -->
+    <div class="card" id="skills-card">
+      <div class="card-header">
+        <span class="icon">🧬</span>
+        <h2>Skills Aprendidas</h2>
+      </div>
+      <div id="skills-list">
+        <div class="skills-empty">
+          <div class="icon">📭</div>
+          <div>No hay skills aprendidas todavía.<br>Ejecutá una tarea para empezar.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Footer ═══ -->
+    <footer class="footer">
+      <p>
+        Subasta + Legado — Hermes Agent Hackathon ·
+        <a href="https://github.com/nerdconf/subasta-legado" target="_blank">GitHub</a> ·
+        Powered by <a href="https://openrouter.ai" target="_blank">OpenRouter</a>
+      </p>
+    </footer>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ═══ State ═══
+    let selectedProfile = '3';
+    let isRunning = false;
+    let phaseCount = 0;
+
+    const DEMO_TASKS = [
+      'Escribime un resumen de 3 bullets de qué es Nebius, en tono casual, para poner en un README.',
+      'Escribime un resumen de 3 bullets de qué es Stripe Skills, en tono casual, para un README.',
+    ];
+
+    // ═══ Init ═══
+    document.addEventListener('DOMContentLoaded', () => {
+      checkStatus();
+    });
+
+    // ═══ Status ═══
+    async function checkStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        const dot = document.getElementById('api-dot');
+        const status = document.getElementById('api-status');
+
+        if (data.api_key_set) {
+          dot.className = 'dot';
+          status.textContent = 'API Conectada';
+        } else {
+          dot.className = 'dot error';
+          status.textContent = 'Sin API Key';
+        }
+
+        document.getElementById('model-name').textContent = data.model;
+        document.getElementById('skills-count').textContent = `${data.skills_count} skill${data.skills_count !== 1 ? 's' : ''}`;
+
+        renderSkills(data.skills);
+      } catch (e) {
+        document.getElementById('api-dot').className = 'dot error';
+        document.getElementById('api-status').textContent = 'Error';
+      }
+    }
+
+    // ═══ Skills ═══
+    function renderSkills(skills) {
+      const container = document.getElementById('skills-list');
+
+      if (!skills || skills.length === 0) {
+        container.innerHTML = `
+          <div class="skills-empty">
+            <div class="icon">📭</div>
+            <div>No hay skills aprendidas todavía.<br>Ejecutá una tarea para empezar.</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = '<div class="skills-grid">' +
+        skills.map(s => `
+          <div class="skill-card">
+            <div class="skill-type">${escapeHtml(s.type)}</div>
+            <div class="skill-desc">${escapeHtml(s.description)}</div>
+            <ul class="skill-steps">
+              ${(s.steps || []).map(step => `<li>${escapeHtml(step)}</li>`).join('')}
+            </ul>
+          </div>
+        `).join('') +
+      '</div>';
+    }
+
+    // ═══ Profile Selection ═══
+    function selectProfile(id, el) {
+      selectedProfile = id;
+      document.querySelectorAll('.profile-option').forEach(opt => opt.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // ═══ Demo Tasks ═══
+    function setDemo(idx) {
+      document.getElementById('task-input').value = DEMO_TASKS[idx];
+      document.getElementById('task-input').focus();
+    }
+
+    // ═══ Run Task ═══
+    async function runTask() {
+      const task = document.getElementById('task-input').value.trim();
+      if (!task) {
+        showToast('⚠️ Escribí una tarea primero');
+        return;
+      }
+      if (isRunning) return;
+
+      isRunning = true;
+      phaseCount = 0;
+      const runBtn = document.getElementById('run-btn');
+      runBtn.disabled = true;
+      runBtn.innerHTML = '<span class="spinner"></span> Procesando...';
+
+      const outputCard = document.getElementById('output-card');
+      outputCard.style.display = 'block';
+      const timeline = document.getElementById('timeline');
+      timeline.innerHTML = '';
+      document.getElementById('stats-bar').style.display = 'none';
+
+      // Scroll to output
+      outputCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      let wasReused = false;
+
+      try {
+        const response = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ task, profile: selectedProfile }),
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          let eventType = null;
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              eventType = line.slice(7).trim();
+            } else if (line.startsWith('data: ') && eventType) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                handleEvent(eventType, data, timeline);
+                if (eventType === 'result' && data.reused) wasReused = true;
+              } catch (e) {
+                console.warn('Parse error:', e);
+              }
+              eventType = null;
+            }
+          }
+        }
+      } catch (e) {
+        addTimelineItem(timeline, '❌', 'Error', `<div class="result-box" style="border-color: rgba(248,113,113,0.3);">${escapeHtml(String(e))}</div>`, 'error');
+      }
+
+      isRunning = false;
+      runBtn.disabled = false;
+      runBtn.innerHTML = '🚀 Ejecutar';
+      checkStatus();  // refresh skills
+    }
+
+    // ═══ Event Handling ═══
+    function handleEvent(type, data, timeline) {
+      switch (type) {
+        case 'phase':
+          phaseCount++;
+          addTimelineItem(timeline, data.icon, data.title, '<span class="spinner">Procesando...</span>', 'active');
+          break;
+
+        case 'skill_found':
+          markLastDone(timeline);
+          const skillHtml = `
+            <div class="skill-card">
+              <div class="skill-type">✅ Skill encontrada: ${escapeHtml(data.type)}</div>
+              <div class="skill-desc">${escapeHtml(data.description)}</div>
+              <ul class="skill-steps">
+                ${(data.steps || []).map(s => `<li>${escapeHtml(s)}</li>`).join('')}
+              </ul>
+            </div>
+          `;
+          addTimelineItem(timeline, '🧠', 'Skill Encontrada', skillHtml);
+          break;
+
+        case 'skill_not_found':
+          markLastDone(timeline);
+          addTimelineItem(timeline, '⚠️', 'Sin Skills', '<span style="color: var(--accent-yellow);">No hay skills para este tipo. Iniciando subasta...</span>');
+          break;
+
+        case 'auction_result':
+          markLastDone(timeline);
+          addTimelineItem(timeline, '🏛️', 'Resultado de la Subasta', `<div class="result-box">${formatMarkdown(data.bids)}</div>`);
+          break;
+
+        case 'selection':
+          addTimelineItem(timeline, '🏅', 'Agente Seleccionado', `<span style="color: var(--accent-cyan); font-weight: 600;">${escapeHtml(data.winner)}</span>`);
+          break;
+
+        case 'result':
+          markLastDone(timeline);
+          const modeLabel = data.reused ? '⚡ Reuso directo' : '🏛️ Subasta completa';
+          addTimelineItem(timeline, '✅', 'Resultado Final', `
+            <div style="margin-bottom: 0.5rem; font-size: 0.78rem; color: var(--text-muted);">${modeLabel}</div>
+            <div class="result-box">${formatMarkdown(data.text)}</div>
+          `);
+          break;
+
+        case 'skill_saved':
+          markLastDone(timeline);
+          addTimelineItem(timeline, '🧬', 'Skill Destilada', `
+            <div class="skill-card">
+              <div class="skill-type">${escapeHtml(data.type)}</div>
+              <div class="skill-desc">${escapeHtml(data.description)}</div>
+              <ul class="skill-steps">
+                ${(data.steps || []).map(s => `<li>${escapeHtml(s)}</li>`).join('')}
+              </ul>
+              <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">📁 ${escapeHtml(data.file)}</div>
+            </div>
+          `);
+          break;
+
+        case 'distill_error':
+          markLastDone(timeline);
+          addTimelineItem(timeline, '⚠️', 'Error en Destilación', `<span style="color: var(--accent-yellow);">${escapeHtml(data.message)}</span>`);
+          break;
+
+        case 'error':
+          markLastDone(timeline);
+          addTimelineItem(timeline, '❌', 'Error', `<div class="result-box" style="border-color: rgba(248,113,113,0.3);">${escapeHtml(data.message)}</div>`, 'error');
+          break;
+
+        case 'done':
+          markLastDone(timeline);
+          const statsBar = document.getElementById('stats-bar');
+          statsBar.style.display = 'flex';
+          document.getElementById('stat-time').textContent = data.elapsed + 's';
+          document.getElementById('stat-phases').textContent = phaseCount;
+          // Determine mode by checking if a skill was found
+          const items = timeline.querySelectorAll('.timeline-title');
+          const hadSkill = Array.from(items).some(el => el.textContent.includes('Skill Encontrada'));
+          document.getElementById('stat-mode').textContent = hadSkill ? 'Reuso' : 'Subasta';
+          showToast('✅ Tarea completada');
+          break;
+      }
+    }
+
+    // ═══ Timeline Helpers ═══
+    function addTimelineItem(timeline, icon, title, content, state = '') {
+      const item = document.createElement('div');
+      item.className = 'timeline-item';
+
+      const iconClass = state === 'active' ? 'timeline-icon active' : (state === 'error' ? 'timeline-icon' : 'timeline-icon done');
+
+      item.innerHTML = `
+        <div class="${iconClass}">${icon}</div>
+        <div class="timeline-body">
+          <div class="timeline-title">${title}</div>
+          <div class="timeline-content">${content}</div>
+        </div>
+      `;
+
+      timeline.appendChild(item);
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function markLastDone(timeline) {
+      const activeIcons = timeline.querySelectorAll('.timeline-icon.active');
+      activeIcons.forEach(el => {
+        el.classList.remove('active');
+        el.classList.add('done');
+        // Also stop spinner in its content
+        const spinner = el.closest('.timeline-item')?.querySelector('.spinner');
+        if (spinner) spinner.remove();
+      });
+    }
+
+    // ═══ Clean Skills ═══
+    async function cleanSkills() {
+      try {
+        await fetch('/api/clean', { method: 'POST' });
+        showToast('🗑️ Skills borradas');
+        checkStatus();
+      } catch (e) {
+        showToast('❌ Error al limpiar');
+      }
+    }
+
+    // ═══ Toast ═══
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 3000);
+    }
+
+    // ═══ Utils ═══
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatMarkdown(text) {
+      if (!text) return '';
+      let html = escapeHtml(text);
+      // Bold
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Italic
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      // Line breaks
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+
+    // Keyboard shortcut
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        runTask();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -9,24 +9,75 @@ An agent receives an ambiguous task and simulates an **internal auction** betwee
 
 **Arc: competition → execution → learning → reusable asset.**
 
-## Quick Start
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Python 3.8+** installed ([python.org](https://www.python.org/downloads/))
+- An **OpenRouter API key** ([openrouter.ai](https://openrouter.ai/settings/keys))
+
+### 1. Clone the repo
 
 ```bash
-# Install the only dependency
-pip install requests
+git clone https://github.com/nerdconf/subasta-legado.git
+cd subasta-legado
+```
 
-# Run the full demo (both tasks in sequence)
+### 2. Install dependencies
+
+```bash
+pip install requests flask
+```
+
+> 💡 On some Windows environments you may also need: `pip install truststore`
+
+### 3. Configure your API key
+
+Create a `.env` file in the project root:
+
+```env
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+AGENT_MODEL=nousresearch/hermes-3-llama-3.1-405b:free
+```
+
+You can swap `AGENT_MODEL` for any model supported by [OpenRouter](https://openrouter.ai/models).
+
+### 4. Run it!
+
+You have two ways to use Subasta + Legado:
+
+#### 🖥️ Terminal Mode (original)
+
+```bash
+# Run the full demo (both tasks in sequence, non-interactive)
 python agent.py --demo
 
-# Or run interactively
+# Interactive mode — type your own task
 python agent.py
 
-# Or pass a task directly
+# Pass a task directly
 python agent.py "Escribime un resumen de 3 bullets de qué es Nebius, en tono casual, para un README."
 
-# Reset learned skills (clean state for re-recording)
+# Reset learned skills (clean state)
 python agent.py --clean
 ```
+
+#### 🌐 Web Demo (frontend)
+
+```bash
+python server.py
+```
+
+Then open **http://localhost:5000** in your browser. The web interface lets you:
+- Type or pick demo tasks
+- Select an agent profile (El Rayo / El Artesano / El Equilibrado)
+- Watch the full flow in real-time (SSE streaming)
+- See learned skills in the inventory panel
+- Clean/reset skills with one click
+
+---
 
 ## How it works
 
@@ -43,11 +94,29 @@ Edit `.env`:
 
 ```env
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
-AGENT_MODEL=nousresearch/hermes-3-llama-3.1-8b
+AGENT_MODEL=nousresearch/hermes-3-llama-3.1-405b:free
 ```
 
 ## Stack
 
 - **Runtime**: Python + OpenRouter API
-- **Model**: NousResearch Hermes 3 (via OpenRouter; swappable to Nebius endpoint)
+- **Frontend**: Flask + vanilla HTML/CSS/JS (SSE streaming)
+- **Model**: NousResearch Hermes 3 (via OpenRouter; swappable to any provider)
 - **Persistence**: JSON skill files on disk
+
+## Project Structure
+
+```
+nerdconf/
+├── agent.py           # CLI agent (terminal mode)
+├── server.py          # Flask web server (web demo)
+├── .env               # API key config (gitignored)
+├── templates/
+│   └── index.html     # Web frontend
+├── static/
+│   └── style.css      # Design system
+├── skills/            # Auto-generated skill files (gitignored)
+├── README.md
+├── WRITEUP.md
+└── claude.md          # Dev spec
+```
